@@ -21,8 +21,11 @@
 Changes :
 
 2016-12-14 : Fix Phrase Extraction BUGS
-
+2017-03-29 : Support Fast Align
 """
+
+import sys
+
 
 EPSILON = 0.000001 #a very small number for smoothing the probability (in case of unk or oov)
 DEBUG_LEVEL = 1
@@ -467,6 +470,76 @@ def PhraseExtraction(backbone,hypo,alignment):
 
     return output
 
+def Extract_Phrase_from_AlignmentStr(src,trg,alignment):
+    """
+    Script to extract phrase from string
+    src = "hello world , hi all ."
+    trg = "ni hao , da jia hao ."
+    aln = "0-0 0-1 1-0 1-1 2-2 3-5 4-3 4-4"
+    """
+    #print "HELLO WORLD"
+    max_s = 0
+    max_t = 0
+    pair = []
+    for item in alignment.split(" "):
+        s,t = [int(j) for j in item.split("-")]
+        pair += [[s,t]]
+        if s > max_s:
+            max_s = s
+        if t > max_t:
+            max_t = t
+
+    max_t += 1
+    max_s += 1
+
+    #print "MAX"
+    #print max_t,max_s
+
+    #aln_matrix = [[0]*max_t]*max_s
+    
+    aln_matrix = [[0 for i in range(0,max_t)] for j in range(0,max_s)]
+    #print aln_matrix
+    for p in pair:
+        #print p
+        aln_matrix[p[0]][p[1]] = 1
+
+    #for al in aln_matrix:
+    #    print al
+    phrases = []
+    try:
+        phrases = PhraseExtraction(src.split(" "),trg.split(" "),aln_matrix)
+    except:
+        pass
+    
+    #for x in phrases:
+    #    print x
+    return phrases
+
+if __name__ == "__main__":
+
+    print "BEGIN"
+    src = "hello world , hi all ."
+    trg = "ni hao , da jia hao ."
+    aln = "0-0 0-1 1-0 1-1 2-2 3-5 4-3 4-4"
+    #Extract_Phrase_from_AlignmentStr(src,trg,aln)
+
+    if len(sys.argv) < 3:
+        print "WordAlign.py merged_file aln > output"
+        exit()
+
+    fsrc = open(sys.argv[1],"r")
+    faln = open(sys.argv[2],"r")
+
+    src = fsrc.readline()
+    while src:
+        src = src.strip()
+        aln = faln.readline().strip()
+        s = src.split(" ||| ")
+        phrases = Extract_Phrase_from_AlignmentStr(s[0].strip(),s[1].strip(),aln)
+        for p in phrases:
+            print p[0] + "\t" + p[1]
+        src = fsrc.readline()
+    #test_PhraseExtraction()
 
 def MainFunc():
     PE2F = LoadWordTranslationProbability("lex.e2f") #PFE = P(F|E)
@@ -617,7 +690,7 @@ def GenScore(sid,nsys,score,k):
 
     return feature_score
 
-if __name__ == "__main__":
+def Main001():
 
     #MainFunc()
 
